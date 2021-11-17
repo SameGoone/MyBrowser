@@ -1,4 +1,4 @@
-﻿namespace MyBrowser
+namespace MyBrowser
 {
     public enum HTMLTags
     {
