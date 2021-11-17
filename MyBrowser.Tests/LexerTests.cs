@@ -59,7 +59,7 @@ namespace MyBrowser.Tests
             List<object> tokens;
             object token;
 
-            //Тест положительных
+            //РўРµСЃС‚ РїРѕР»РѕР¶РёС‚РµР»СЊРЅС‹С…
             lexer = new Lexer(stringWithPositiveInt);
             tokens = new List<object>();
             while (lexer.TryGetToken(out token))
@@ -69,7 +69,7 @@ namespace MyBrowser.Tests
             Assert.IsInstanceOfType(tokens[3], typeof(int));
             Assert.AreEqual(10, tokens[3]);
 
-            //Тест отрицательных
+            //РўРµСЃС‚ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹С…
             lexer = new Lexer(stringWithNegativeInt);
             tokens = new List<object>();
             while (lexer.TryGetToken(out token))
@@ -89,7 +89,7 @@ namespace MyBrowser.Tests
             List<object> tokens;
             object token;
 
-            //Тест положительных
+            //РўРµСЃС‚ РїРѕР»РѕР¶РёС‚РµР»СЊРЅС‹С…
             lexer = new Lexer(stringWithPositiveDouble);
             tokens = new List<object>();
             while (lexer.TryGetToken(out token))
@@ -99,7 +99,7 @@ namespace MyBrowser.Tests
             Assert.IsInstanceOfType(tokens[3], typeof(double));
             Assert.AreEqual(2.5, (double)tokens[3], 0.001);
 
-            //Тест отрицательных
+            //РўРµСЃС‚ РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹С…
             lexer = new Lexer(stringWithNegativeDouble);
             tokens = new List<object>();
             while (lexer.TryGetToken(out token))
