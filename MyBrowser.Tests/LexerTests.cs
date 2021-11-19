@@ -12,8 +12,8 @@ namespace MyBrowser.Tests
         [TestMethod]
         public void TestLexingHTML()
         {
-            string code = "<body atr1=\"5\">Hello World!</body>";
-            object[] expectedTokens = new object[] { '<', "body", ' ', "atr1", '=', '"', 5, '"', '>', "Hello", ' ', "World!", '<', '/', "body", '>' };
+            string code = "<body attr1=\"5\">Hello World!</body>";
+            object[] expectedTokens = new object[] { '<', "body", "attr1", '=', '"', 5, '"', '>', "Hello", "World!", '<', '/', "body", '>' };
 
             TestLex(code, expectedTokens);
         }
@@ -25,9 +25,36 @@ namespace MyBrowser.Tests
         public void TestLexingCSS()
         {
             string code = "body{font-family:Arial,Verdana,sans-serif; font-size:11pt;}";
-            object[] expectedTokens = new object[] { "body", '{', "font-family", ':', "Arial", ',', "Verdana", ',' , "sans-serif", ';', ' ', "font-size", ':', 11, "pt", ';', '}' };
+            object[] expectedTokens = new object[] { "body", '{', "font-family", ':', "Arial", ',', "Verdana", ',' , "sans-serif", ';', "font-size", ':', 11, "pt", ';', '}' };
 
             TestLex(code, expectedTokens);
+        }
+
+        /// <summary>
+        /// Проверяет правильность разбиения на токены различных CSS-селекторов
+        /// </summary>
+        public void TestLexingSelectors()
+        {
+            string selector1 = ".class1.class2";
+            object[] expectedObjs1 = new object[] { ".class1.class2" };
+
+            string selector2 = ".class1 .class2";
+            object[] expectedObjs2 = new object[] { ".class1", ".class2" };
+
+            string selector3 = "p.className1.className2#someId";
+            object[] expectedObjs3 = new object[] { "p.className1.className2#someId" };
+
+            string selector4 = "div span";
+            object[] expectedObjs4 = new object[] { "div", "span" };
+
+            string selector5 = "div>span";
+            object[] expectedObjs5 = new object[] { "div", '>', "span" };
+
+            TestLex(selector1, expectedObjs1);
+            TestLex(selector2, expectedObjs2);
+            TestLex(selector3, expectedObjs3);
+            TestLex(selector4, expectedObjs4);
+            TestLex(selector5, expectedObjs5);
         }
 
         /// <summary>
@@ -51,8 +78,8 @@ namespace MyBrowser.Tests
             string stringWithPositiveInt = "margin: 10px;";
             string stringWithNegativeInt = "margin: -10px;";
 
-            TestNums(stringWithPositiveInt, 3, 10);
-            TestNums(stringWithNegativeInt, 3, -10);
+            TestNums(stringWithPositiveInt, 2, 10);
+            TestNums(stringWithNegativeInt, 2, -10);
         }
 
         /// <summary>
@@ -64,8 +91,8 @@ namespace MyBrowser.Tests
             string stringWithPositiveDouble = "margin: 2.5em;";
             string stringWithNegativeDouble = "margin: -2.5em;";
 
-            TestNums(stringWithPositiveDouble, 3, 2.5);
-            TestNums(stringWithNegativeDouble, 3, -2.5);
+            TestNums(stringWithPositiveDouble, 2, 2.5);
+            TestNums(stringWithNegativeDouble, 2, -2.5);
         }
 
         /// <summary>
