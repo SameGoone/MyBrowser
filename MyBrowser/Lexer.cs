@@ -46,9 +46,14 @@ namespace MyBrowser
         }
 
         /// <summary>
-        /// Символы, при обнаружении которых следует прервать считывание строки или идентификатора
+        /// Символы, при обнаружении которых следует прервать считывание идентификатора
         /// </summary>
-        private List<char> specialSymbols = new List<char>() { '<', '>', '/', '=', '\"', '\'', ';', ':', '{', '}', '+', '~', ' ', ',' };
+        private List<char> stopIdentSymbols = new List<char>() { '<', '>', '/', '=', '\"', '\'', ';', ':', '{', '}', '+', '~', ',' };
+
+        /// <summary>
+        /// Символы, с которых может начинаться селектор
+        /// </summary>
+        private List<char> startOfSelectors = new List<char>() { '.', '#', };
 
         /// <summary>
         /// 
@@ -62,7 +67,7 @@ namespace MyBrowser
         /// <summary>
         /// Пытается считать следующий токен из внутренней строки.
         /// </summary>
-        /// <param name="token">Выходной параметр. Получает int - если целое число, double - если число с плавающей точкой, string - если идентификатор или строка, char - если специальный символ</param>
+        /// <param name="token">Выходной параметр. Получает int - если целое число, double - если число с плавающей точкой, string - если идентификатор, char - если специальный символ</param>
         /// <returns>false, если не получилось считать информацию, т.к. достигнут конец строки. Иначе - true</returns>
         public bool TryGetToken(out object token)
         {
@@ -70,7 +75,7 @@ namespace MyBrowser
             if (isEnd)
                 return false;
 
-            while (char.IsWhiteSpace(ch) && ch != ' ')
+            while (char.IsWhiteSpace(ch))
             {
                 Shift();
             }
@@ -89,17 +94,9 @@ namespace MyBrowser
                 token = GetNumber(true);
             }
 
-            else if (char.IsLetter(ch))
+            else if (char.IsLetter(ch) || startOfSelectors.Contains(ch))
             {
-                string buf = ch.ToString();
-                Shift();
-                while (!specialSymbols.Contains(ch) && !char.IsWhiteSpace(ch) && !isEnd)
-                {
-                    buf += ch;
-                    Shift();
-                }
-
-                token = buf;
+                token = GetIdent();
             }
 
             else
@@ -161,6 +158,23 @@ namespace MyBrowser
                     result *= -1;
                 return result;
             }
+        }
+
+        /// <summary>
+        /// Считывает идентификатор
+        /// </summary>
+        /// <returns></returns>
+        private string GetIdent()
+        {
+            string buf = ch.ToString();
+            Shift();
+            while (!stopIdentSymbols.Contains(ch) && !char.IsWhiteSpace(ch) && !isEnd)
+            {
+                buf += ch;
+                Shift();
+            }
+
+            return buf;
         }
 
         /// <summary>
