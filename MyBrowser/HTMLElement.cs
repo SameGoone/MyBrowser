@@ -8,7 +8,7 @@ namespace MyBrowser
 {
     public class HTMLElement
     {
-        public HTMLTags Tag
+        public string Tag
         {
             get
             {
@@ -19,7 +19,7 @@ namespace MyBrowser
                 m_Tag = value;
             }
         }
-        private HTMLTags m_Tag;
+        private string m_Tag;
 
         public HTMLElement Parent
         {
@@ -137,6 +137,12 @@ namespace MyBrowser
             }
         }
         private HTMLElement m_PreviousSibling;
+
+        public HTMLElement()
+        {
+            m_Attributes = new List<HTMLAttribute>();
+            m_Children = new List<HTMLElement>();
+        }
 
 
         public bool TryGetAttributeWithName(string attributeName, HTMLAttribute attribute)
