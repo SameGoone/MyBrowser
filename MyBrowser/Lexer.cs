@@ -67,7 +67,7 @@ namespace MyBrowser
         /// <summary>
         /// Пытается считать следующий токен из внутренней строки.
         /// </summary>
-        /// <param name="token">Выходной параметр. Получает int - если целое число, double - если число с плавающей точкой, string - если идентификатор, char - если специальный символ</param>
+        /// <param name="token">Выходной параметр. Получает int - если целое число, double - если число с плавающей точкой, string - если идентификатор, char[] - если строка, char - если специальный символ</param>
         /// <returns>false, если не получилось считать информацию, т.к. достигнут конец строки. Иначе - true</returns>
         public bool TryGetToken(out object token)
         {
@@ -97,6 +97,11 @@ namespace MyBrowser
             else if (char.IsLetter(ch) || startOfSelectors.Contains(ch))
             {
                 token = GetIdent();
+            }
+
+            else if (ch == '"' || ch == '\'')
+            {
+                token = GetStringData(ch);
             }
 
             else
@@ -175,6 +180,25 @@ namespace MyBrowser
             }
 
             return buf;
+        }
+
+        /// <summary>
+        /// Считывает строку (знаечние между двойными или одиночными кавычками)
+        /// </summary>
+        /// <param name="quoteChar">Символ кавычки (двойная или одиночная)</param>
+        /// <returns>Массив символов, находящихся между кавычками</returns>
+        private char[] GetStringData(char quoteChar)
+        {
+            List<char> data = new List<char>();
+            Shift();
+            while(ch != quoteChar)
+            {
+                data.Add(ch);
+                Shift();
+            }
+            Shift();
+
+            return data.ToArray();
         }
 
         /// <summary>
