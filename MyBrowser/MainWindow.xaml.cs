@@ -28,14 +28,38 @@ namespace MyBrowser
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
-            Lexer lexer = new Lexer(TextBox1.Text);
-            object token;
-            while (lexer.TryGetToken(out token))
+            ParserHTML parserHTML = new ParserHTML();
+            var dom = parserHTML.Parse(TextBox1.Text);
+            HTMLElement doc = dom.Document;
+            TreeViewItem treeRoot = new TreeViewItem() { Header = doc.Tag };
+            if (doc.Children.Count > 0)
             {
-                string type = token.GetType().Name;
-                MessageBox.Show($"{token}  type: {type}");
+                treeRoot.IsExpanded = true;
+                foreach (var child in doc.Children)
+                    ShowItem(child, treeRoot);
             }
-            MessageBox.Show($"конец");
+
+
+            treeView.Items.Clear();
+            treeView.Items.Add(treeRoot);
+        }
+
+        private void ShowItem(HTMLElement element, TreeViewItem parent)
+        {
+            var newTreeItem = new TreeViewItem() { Header = element.Tag };
+            if (element.Children.Count == 0)
+            {
+                newTreeItem.IsExpanded = false;
+            }
+            else
+            {
+                newTreeItem.IsExpanded = true;
+                foreach (var child in element.Children)
+                {
+                    ShowItem(child, newTreeItem);
+                }
+            }
+            parent.Items.Add(newTreeItem);
         }
     }
 }
