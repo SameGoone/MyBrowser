@@ -8,146 +8,48 @@ namespace MyBrowser
 {
     public class HTMLElement
     {
-        public string Tag
-        {
-            get
-            {
-                return m_Tag;
-            }
-            set
-            {
-                m_Tag = value;
-            }
-        }
-        private string m_Tag;
+        public string Tag { get; set; }
 
-        public HTMLElement Parent
-        {
-            get
-            {
-                return m_Parent;
-            }
-            set
-            {
-                m_Parent = value;
-            }
-        }
-        private HTMLElement m_Parent;
+        public HTMLElement Parent { get; set; }
 
-        public List<HTMLElement> Children
-        {
-            get
-            {
-                return m_Children;
-            }
-            set
-            {
-                m_Children = value;
-            }
-        }
-        private List<HTMLElement> m_Children;
+        public List<HTMLElement> Children { get; private set; }
 
-        public List<HTMLElement> Descendants
-        {
-            get
-            {
-                return m_Descendants;
-            }
-            set
-            {
-                m_Descendants = value;
-            }
-        }
-        private List<HTMLElement> m_Descendants;
+        public List<HTMLElement> Descendants { get; private set; }
 
-        public string InnerText
-        {
-            get
-            {
-                return m_InnerText;
-            }
-            set
-            {
-                m_InnerText = value;
-            }
-        }
-        private string m_InnerText;
+        public string InnerText { get; set; }
 
-        public List<HTMLAttribute> Attributes
-        {
-            get
-            {
-                return m_Attributes;
-            }
-            set
-            {
-                m_Attributes = value;
-            }
-        }
-        private List<HTMLAttribute> m_Attributes;
+        public List<HTMLAttribute> Attributes { get; private set; }
 
-        public List<Style> Styles
-        {
-            get
-            {
-                return m_Styles;
-            }
-            set
-            {
-                m_Styles = value;
-            }
-        }
-        private List<Style> m_Styles;
+        public List<Style> Styles { get; private set; }
 
-        public List<HTMLElement> Siblings
-        {
-            get
-            {
-                return m_Siblings;
-            }
-            set
-            {
-                m_Siblings = value;
-            }
-        }
-        private List<HTMLElement> m_Siblings;
+        public List<HTMLElement> Siblings { get; private set; }
 
-        public HTMLElement NextSibling
-        {
-            get
-            {
-                return m_NextSibling;
-            }
-            set
-            {
-                m_NextSibling = value;
-            }
-        }
-        private HTMLElement m_NextSibling;
+        public HTMLElement NextSibling { get; set; }
 
-        public HTMLElement PreviousSibling
-        {
-            get
-            {
-                return m_PreviousSibling;
-            }
-            set
-            {
-                m_PreviousSibling = value;
-            }
-        }
-        private HTMLElement m_PreviousSibling;
+        public HTMLElement PreviousSibling { get; set; }
 
         public HTMLElement()
         {
-            m_Attributes = new List<HTMLAttribute>();
-            m_Children = new List<HTMLElement>();
+            Attributes = new List<HTMLAttribute>();
+            Children = new List<HTMLElement>();
+            InnerText = "";
         }
 
 
-        public bool TryGetAttributeWithName(string attributeName, HTMLAttribute attribute)
+        public bool TryGetAttributeWithName(string attributeName, out HTMLAttribute attribute)
         {
-            throw new Exception("The method or operation is not implemented.");
+            bool isContained = false;
+            attribute = null;
+            foreach(var attr in Attributes)
+            {
+                if (attribute.Name == attributeName)
+                {
+                    isContained = true;
+                    attribute = attr;
+                }
+            }
+
+            return isContained;
         }
 
         public bool HasAttributeWithName(string attributeName)
@@ -157,7 +59,19 @@ namespace MyBrowser
 
         public bool IsChildOfElement(string elementTag)
         {
-            throw new Exception("The method or operation is not implemented.");
+            bool result;
+            if (Parent != null)
+            {
+                if (Parent.Tag == elementTag)
+                    result = true;
+                else 
+                    result = false;
+            }
+
+            else
+                result = false;
+
+            return result;
         }
 
         public bool IsDescendantOfElement(string elementTag)
@@ -168,6 +82,26 @@ namespace MyBrowser
         public bool IsRenderable()
         {
             throw new Exception("The method or operation is not implemented.");
+        }
+
+        public void AddChild(HTMLElement newChild)
+        {
+            if (Children.Count > 0)
+            {
+                var previousChild = Children[Children.Count - 1];
+                previousChild.NextSibling = newChild;
+                newChild.PreviousSibling = previousChild;
+            }
+            Children.Add(newChild);
+            newChild.Parent = this;
+        }
+
+        public void AddChildrenRange(List<HTMLElement> children)
+        {
+            foreach (var child in children)
+            {
+                AddChild(child);
+            }
         }
     }
 }
