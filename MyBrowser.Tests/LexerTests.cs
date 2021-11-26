@@ -12,13 +12,12 @@ namespace MyBrowser.Tests
         [TestMethod]
         public void TestLexingHTMLTag()
         {
-            string code = "<body attr1=\"5\" attr2=\"string1\" attr3 = '5' attr4 = 'string2' attr5=5px>Hello World!</body>";
-            object[] expectedTokens = new object[] { '<', "body", 
-                                                     "attr1", '=', new char[] { '5' }, 
-                                                     "attr2", '=', "string1".ToCharArray(), 
-                                                     "attr3", '=', new char[] { '5' }, 
-                                                     "attr4", '=', "string2".ToCharArray(), 
-                                                     "attr5", '=', 5, "px", 
+            string code = "<body attr1=\"5\" attr2=\"string1\" attr3 = '5' attr4=5px>Hello World!</body>";
+            object[] expectedTokens = new object[] { '<', "body",
+                                                     "attr1", '=','\"', 5, '\"',
+                                                     "attr2", '=', '\"', "string1", '\"',
+                                                     "attr3", '=', '\'', 5, '\'',
+                                                     "attr4", '=', 5, "px",
                                                      '>', "Hello", "World!", '<', '/', "body", '>' };
 
             TestLex(code, expectedTokens);
@@ -31,7 +30,7 @@ namespace MyBrowser.Tests
         public void TestLexingCSSRule()
         {
             string code = "body{font-family:Arial,Verdana,sans-serif; font-size:11pt;}";
-            object[] expectedTokens = new object[] { "body", '{', "font-family", ':', "Arial", ',', "Verdana", ',' , "sans-serif", ';', "font-size", ':', 11, "pt", ';', '}' };
+            object[] expectedTokens = new object[] { "body", '{', "font", '-', "family", ':', "Arial", ',', "Verdana", ',', "sans", '-', "serif", ';', "font", '-', "size", ':', 11, "pt", ';', '}' };
 
             TestLex(code, expectedTokens);
         }
@@ -72,15 +71,7 @@ namespace MyBrowser.Tests
         private void TestLex(string code, object[] expectedTokens)
         {
             var tokens = Analyze(code);
-            Assert.AreEqual(expectedTokens.Length, tokens.Count);
-
-            for(int i = 0; i < expectedTokens.Length; i++)
-            {
-                if (expectedTokens[i].GetType() == typeof(char[]))
-                    CollectionAssert.AreEqual((char[])expectedTokens[i], (char[])tokens[i]);
-                else
-                    Assert.AreEqual(expectedTokens[i], tokens[i]);
-            }
+            CollectionAssert.AreEqual(tokens, expectedTokens);
         }
 
         /// <summary>
