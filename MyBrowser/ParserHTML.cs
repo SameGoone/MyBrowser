@@ -8,6 +8,7 @@ namespace MyBrowser
 {
     public class ParserHTML
     {
+        private readonly List<string> emptyElements = new List<string> { "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr" };
         private Lexer lexer;
 
         private object token
@@ -33,7 +34,10 @@ namespace MyBrowser
             {
                 Shift();
                 if (token.GetType() == typeof(string))
-                    dom.Document = ParseElement();
+                {
+                    ElementParsingResult result;
+                    dom.Document = ParseElement(out result);
+                }
             }
 
             return dom;
@@ -43,60 +47,138 @@ namespace MyBrowser
         /// Считывает следующий элемент HTML
         /// </summary>
         /// <returns></returns>
-        private HTMLElement ParseElement()
+        private HTMLElement ParseElement(out ElementParsingResult result)
         {
+            List<HTMLElement> potentialChildren = new List<HTMLElement>();
             HTMLElement newElement = new HTMLElement();
             newElement.Tag = (string)token;
-            bool isOpening = true;
+            bool insideOpeningTag = true;
             Shift();
             while (true)
             {
-                if (token.GetType() == typeof(string) && isOpening)
-                    newElement.Attributes.Add(ParseAttribute());
-
-                else if (token.Equals('>'))
+                if (token is NonToken)
                 {
-                    if (isOpening)
-                    {
-                        isOpening = false;
-                        Shift();
-                        newElement.InnerText = ParseInnerText();
-                    }
-                    else;
-                        // Ошибка кода
+                    result = ElementParsingResult.GetOkResult();
+                    newElement.AddChildrenRange(potentialChildren);
+                    return newElement;
                 }
 
-                else if (token.Equals('<'))
+                if (insideOpeningTag) // Внутри открывающего тэга
                 {
-                    Shift();
+                    if (token is string)
+                        newElement.Attributes.Add(ParseAttribute());
 
-                    if (token.Equals('/'))
+                    else if (token.Equals('>'))
                     {
                         Shift();
-                        if (token.GetType() == typeof(string))
+                        if (IsEmptyElement(newElement.Tag)) // Если элемент допускает отсутствие закрывающего тэга (пустой элемент)
                         {
-                            if (((string)token).Equals(newElement.Tag))
+                            result = ElementParsingResult.GetOkResult();
+                            return newElement;
+                        }
+                        else
+                        {
+                            insideOpeningTag = false;
+                        }
+                    }
+
+                    else if (token.Equals('/'))
+                    {
+                        Shift();
+                        Shift();
+                        result = ElementParsingResult.GetOkResult();
+                        return newElement;
+                    }
+
+                    else
+                    {
+                        Shift();
+                    }
+                }
+                else // Вне открывающего тэга
+                {
+                    if (token.Equals('<'))
+                    {
+                        Shift();
+
+                        // Если закрывающий тэг
+                        if (token.Equals('/'))
+                        {
+                            Shift();
+                            if (token is string)
                             {
-                                Shift();
-                                Shift();
+                                var tag = (string)token;
+                                ShiftToEndOfEndingTag();
+
+                                if (tag.Equals(newElement.Tag)) // Закрывающий тэг текущего элемента, элемент успешно закрывается
+                                {
+                                    result = ElementParsingResult.GetOkResult();
+                                    newElement.AddChildrenRange(potentialChildren);
+                                    return newElement;
+                                }
+                                else // Встречен закрывающий тэг другого элемента, значит пропущен закрывающий тэг текущего
+                                {
+                                    result = ElementParsingResult.GetCloseAnotherTagResult(tag, newElement, potentialChildren);
+                                    return newElement;
+                                }
+                            }
+                            else // Ошибка кода, имитировать закрытие текущего элемента
+                            {
+                                result = ElementParsingResult.GetOkResult();
+                                newElement.AddChildrenRange(potentialChildren);
                                 return newElement;
                             }
-                            else;
-                            // Ошибка кода
                         }
-                        else;
-                        // Ошибка кода
+
+                        // Если открывающий тэг нового элемента
+                        else if (token is string)
+                        {
+                            ElementParsingResult childResult;
+                            HTMLElement potentialChild = ParseElement(out childResult);
+                            if (childResult is OkResult)
+                            {
+                                potentialChildren.Add(potentialChild);
+                            }
+                            else
+                            {
+                                var anotherTagResult = (CloseAnotherTagResult)childResult;
+                                if (anotherTagResult.Tag == newElement.Tag)
+                                {
+                                    newElement.AddChildrenRange(potentialChildren);
+                                    newElement.AddChildrenRange(anotherTagResult.ElementsWithoutCloseTag);
+                                    result = ElementParsingResult.GetOkResult();
+                                    return newElement;
+                                }
+                                else
+                                {
+                                    anotherTagResult.AddElementWithPotentialChildren(newElement, potentialChildren);
+                                    result = anotherTagResult;
+                                    return newElement;
+                                }
+                            }
+                        }
+
+                        else if (token.Equals('!'))
+                            ParseComment();
+
+                        // TODO: добавить поддержку знаков < и > в тексте
                     }
-
-                    else if (token.GetType() == typeof(string))
-                        newElement.Children.Add(ParseElement());
-
-                    else if (token.Equals('!')) ;
-                        // Потенциально комментарий
-
-                    // TODO: добавить поддержку простых тегов
+                    else
+                    {
+                        newElement.InnerText += ParseInnerText();
+                    }
                 }
             }
+        }
+
+        /// <summary>
+        /// Сдвигает указатель на токен, следующий за синтаксисом закрытия тэга
+        /// </summary>
+        private void ShiftToEndOfEndingTag()
+        {
+            Shift();
+            if (token.Equals('>'))
+                Shift();
         }
 
         /// <summary>
@@ -112,10 +194,9 @@ namespace MyBrowser
             if (token.Equals('='))
             {
                 Shift();
-                if (token.GetType() == typeof(char[]))
+                if (token.Equals('\"') || token.Equals('\''))
                 {
-                    attribute.Value = new string((char[])token);
-                    Shift();
+                    attribute.Value = GetStringData((char)token);
                 }
                 else;
                 // TODO: Добавить поддержку атрибутов без кавычек
@@ -127,6 +208,25 @@ namespace MyBrowser
         }
 
         /// <summary>
+        /// Считывает строку (значение между двойными или одиночными кавычками)
+        /// </summary>
+        /// <param name="quoteChar">Символ кавычки (двойная или одиночная)</param>
+        /// <returns>Значение, находящееся между кавычками</returns>
+        private string GetStringData(char quoteChar)
+        {
+            string data = "";
+            Shift();
+            while (!token.Equals(quoteChar))
+            {
+                data += token;
+                Shift();
+            }
+            Shift();
+
+            return data;
+        }
+
+        /// <summary>
         /// Считывает текст между тегами
         /// </summary>
         /// <returns></returns>
@@ -134,7 +234,7 @@ namespace MyBrowser
         {
             string text = "";
             bool isFirst = true;
-            while (!token.Equals('<'))
+            while (!token.Equals('<') && !(token is NonToken))
             {
                 if (isFirst)
                     isFirst = false;
@@ -153,11 +253,41 @@ namespace MyBrowser
         }
 
         /// <summary>
-        /// Пропускает комментарии
+        /// Пропускает комментарий
         /// </summary>
         private void ParseComment()
         {
-            throw new Exception("The method or operation is not implemented.");
+            Shift();
+            if (token.Equals('-'))
+            {
+                Shift();
+                if (token.Equals('-'))
+                {
+                    Shift();
+                    while (!(token is NonToken))
+                    {
+                        if (!token.Equals('-'))
+                            Shift();
+                        else
+                        {
+                            Shift();
+                            if (token.Equals('-'))
+                            {
+                                Shift();
+                                if (token.Equals('>'))
+                                {
+                                    Shift();
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                else return;
+
+            }
+            else return;
         }
 
         /// <summary>
@@ -165,7 +295,13 @@ namespace MyBrowser
         /// </summary>
         private void Shift()
         {
-            lexer.TryGetToken(out curToken);
+            if (!lexer.TryGetToken(out curToken))
+                curToken = new NonToken();
+        }
+
+        private bool IsEmptyElement(string tag)
+        {
+            return emptyElements.Contains(tag);
         }
     }
 }
