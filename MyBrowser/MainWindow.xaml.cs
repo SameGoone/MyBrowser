@@ -31,22 +31,17 @@ namespace MyBrowser
             ParserHTML parserHTML = new ParserHTML();
             var dom = parserHTML.Parse(TextBox1.Text);
             HTMLElement doc = dom.Document;
-            TreeViewItem treeRoot = new TreeViewItem() { Header = doc.Tag };
-            if (doc.Children.Count > 0)
-            {
-                treeRoot.IsExpanded = true;
-                foreach (var child in doc.Children)
-                    ShowItem(child, treeRoot);
-            }
-
-
-            treeView.Items.Clear();
-            treeView.Items.Add(treeRoot);
+            ShowItem(doc, null);
         }
 
         private void ShowItem(HTMLElement element, TreeViewItem parent)
         {
             var newTreeItem = new TreeViewItem() { Header = element.Tag };
+            if (!string.IsNullOrEmpty(element.InnerText))
+            {
+                newTreeItem.Header += ": \"" + element.InnerText + "\"";
+            }
+
             if (element.Children.Count == 0)
             {
                 newTreeItem.IsExpanded = false;
@@ -59,7 +54,14 @@ namespace MyBrowser
                     ShowItem(child, newTreeItem);
                 }
             }
-            parent.Items.Add(newTreeItem);
+
+            if (parent != null)
+                parent.Items.Add(newTreeItem);
+            else
+            {
+                treeView.Items.Clear();
+                treeView.Items.Add(newTreeItem);
+            }
         }
     }
 }
