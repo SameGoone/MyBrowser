@@ -2,44 +2,35 @@ namespace MyBrowser
 {
     public class DOM
     {
-        public HTMLElement Document
-        {
-            get
-            {
-                return m_Document;
-            }
-            set
-            {
-                m_Document = value;
-            }
-        }
-        private HTMLElement m_Document;
+        public HTMLElement Document { get; set; }
 
         public HTMLElement Body
         {
             get
             {
-                return m_Body;
+                return body;
             }
             set
             {
-                m_Body = value;
+                body = value;
+                Document.AddChild(body);
             }
         }
-        private HTMLElement m_Body;
+        private HTMLElement body;
 
         public HTMLElement Head
         {
             get
             {
-                return m_Head;
+                return head;
             }
             set
             {
-                m_Head = value;
+                head = value;
+                Document.AddChild(head);
             }
         }
-        private HTMLElement m_Head;
+        private HTMLElement head;
     }
 }
 
