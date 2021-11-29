@@ -8,7 +8,7 @@ namespace MyBrowser
 {
     public class HTMLElement
     {
-        public string Tag { get; set; }
+        public string Tag { get; private set; }
 
         public HTMLElement Parent { get; set; }
 
@@ -28,8 +28,9 @@ namespace MyBrowser
 
         public HTMLElement PreviousSibling { get; set; }
 
-        public HTMLElement()
+        public HTMLElement(string tag)
         {
+            Tag= tag;
             Attributes = new List<HTMLAttribute>();
             Children = new List<HTMLElement>();
             InnerText = "";

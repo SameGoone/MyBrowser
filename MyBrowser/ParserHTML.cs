@@ -8,7 +8,12 @@ namespace MyBrowser
 {
     public class ParserHTML
     {
+        private readonly string htmlTag = "html";
+        private readonly string headTag = "head";
+        private readonly string bodyTag = "body";
         private readonly List<string> emptyElements = new List<string> { "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr" };
+        private readonly List<string> onlyHeadElements = new List<string> { "title", "link", "style", "bgsound", "base" };
+        private readonly List<string> bodyOrHeadElements = new List<string> { "script", "basefront" };
         private Lexer lexer;
 
         private object token
@@ -33,14 +38,73 @@ namespace MyBrowser
             if (token.Equals('<'))
             {
                 Shift();
-                if (token.GetType() == typeof(string))
+                if (token is string)
                 {
-                    ElementParsingResult result;
-                    dom.Document = ParseElement(out result);
+                    var tag = ToLower(token);
+                    if (tag.Equals(htmlTag))
+                    {
+                        ElementParsingResult result;
+                        dom.Document = ParseElement(out result);
+                    }
+                    else
+                    {
+                        dom.Document = new HTMLElement(htmlTag);
+                        List<HTMLElement> potentialChildren = new List<HTMLElement>();
+                        while (!(token is NonToken))
+                        {
+                            ElementParsingResult result;
+                            potentialChildren.Add(ParseElement(out result));
+                        }
+                        CorrectDOM(dom, potentialChildren);
+                    }
                 }
             }
 
             return dom;
+        }
+
+        /// <summary>
+        /// Распределяет элементы, которые находятся вне контейнеров, в нужные контейнеры
+        /// </summary>
+        /// <param name="dom"></param>
+        /// <param name="potentialChildren"></param>
+        private void CorrectDOM(DOM dom, List<HTMLElement> potentialChildren)
+        {
+            if (dom.Document == null)
+                dom.Document = new HTMLElement(htmlTag);
+
+            List<HTMLElement> elementsWithoutContainer = new List<HTMLElement>(potentialChildren);
+
+            foreach (HTMLElement element in potentialChildren)
+            {
+                if (element.Tag.Equals(headTag))
+                {
+                    dom.Head = element;
+                    elementsWithoutContainer.Remove(element);
+                }
+                else if (element.Tag.Equals(bodyTag))
+                {
+                    dom.Body = element;
+                    elementsWithoutContainer.Remove(element);
+                }
+            }
+
+            if (dom.Head == null)
+            {
+                dom.Head = new HTMLElement(headTag);
+            }
+            if (dom.Body == null)
+            {
+                dom.Body = new HTMLElement(bodyTag);
+            }
+
+            foreach (HTMLElement element in elementsWithoutContainer)
+            {
+                if (onlyHeadElements.Contains(element.Tag))
+                    dom.Head.AddChild(element);
+                else
+                    dom.Body.AddChild(element);
+            }
         }
 
         /// <summary>
@@ -49,9 +113,21 @@ namespace MyBrowser
         /// <returns></returns>
         private HTMLElement ParseElement(out ElementParsingResult result)
         {
+            if (!(token is string))
+                while (!(token is NonToken))
+                {
+                    if (token.Equals('<'))
+                    {
+                        Shift();
+                        if (token is string)
+                            break;
+                    }
+                    else
+                        Shift();
+                }
+
             List<HTMLElement> potentialChildren = new List<HTMLElement>();
-            HTMLElement newElement = new HTMLElement();
-            newElement.Tag = (string)token;
+            HTMLElement newElement = new HTMLElement(ToLower(token));
             bool insideOpeningTag = true;
             Shift();
             while (true)
@@ -79,6 +155,12 @@ namespace MyBrowser
                         else
                         {
                             insideOpeningTag = false;
+                            if (newElement.Tag.Equals("script"))
+                            {
+                                result = ReadScript(newElement);
+                                return newElement;
+                            }
+
                         }
                     }
 
@@ -105,29 +187,8 @@ namespace MyBrowser
                         if (token.Equals('/'))
                         {
                             Shift();
-                            if (token is string)
-                            {
-                                var tag = (string)token;
-                                ShiftToEndOfEndingTag();
-
-                                if (tag.Equals(newElement.Tag)) // Закрывающий тэг текущего элемента, элемент успешно закрывается
-                                {
-                                    result = ElementParsingResult.GetOkResult();
-                                    newElement.AddChildrenRange(potentialChildren);
-                                    return newElement;
-                                }
-                                else // Встречен закрывающий тэг другого элемента, значит пропущен закрывающий тэг текущего
-                                {
-                                    result = ElementParsingResult.GetCloseAnotherTagResult(tag, newElement, potentialChildren);
-                                    return newElement;
-                                }
-                            }
-                            else // Ошибка кода, имитировать закрытие текущего элемента
-                            {
-                                result = ElementParsingResult.GetOkResult();
-                                newElement.AddChildrenRange(potentialChildren);
-                                return newElement;
-                            }
+                            result = ParseCloseTag(newElement, potentialChildren);
+                            return newElement;
                         }
 
                         // Если открывающий тэг нового элемента
@@ -182,13 +243,79 @@ namespace MyBrowser
         }
 
         /// <summary>
+        /// Проверяет корректность закрытия элемента
+        /// </summary>
+        /// <param name="element">Текущий анализируемый элемент</param>
+        /// <param name="potentialChildren">Элементы, которые обнаружены, как потенциально дочерние к текущему</param>
+        /// <returns>Определяет, был ли проанализирован закрывающий тэг данного элемента, или другого</returns>
+        private ElementParsingResult ParseCloseTag(HTMLElement element, List<HTMLElement> potentialChildren)
+        {
+            Shift();
+            ElementParsingResult result;
+            if (token is string)
+            {
+                var tag = ToLower(token);
+                ShiftToEndOfEndingTag();
+
+                if (tag.Equals(element.Tag)) // Закрывающий тэг текущего элемента, элемент успешно закрывается
+                {
+                    result = ElementParsingResult.GetOkResult();
+                    element.AddChildrenRange(potentialChildren);
+                }
+                else // Встречен закрывающий тэг другого элемента, значит пропущен закрывающий тэг текущего
+                {
+                    result = ElementParsingResult.GetCloseAnotherTagResult(tag, element, potentialChildren);
+                }
+            }
+            else // Ошибка кода, имитировать закрытие текущего элемента
+            {
+                result = ElementParsingResult.GetOkResult();
+                element.AddChildrenRange(potentialChildren);
+            }
+
+            return result;
+        }
+
+        private ElementParsingResult ReadScript(HTMLElement element)
+        {
+            string script = "";
+            ElementParsingResult result = ElementParsingResult.GetOkResult();
+            while (!(token is NonToken))
+            {
+                if (token.Equals('<'))
+                {
+                    Shift();
+                    if (token.Equals('/'))
+                    {
+                        Shift();
+                        result = ParseCloseTag(element, new List<HTMLElement>());
+                        break;
+                    }
+                    else
+                    {
+                        script += "<" + token;
+                    }
+
+                }
+                else
+                {
+                    script += token;
+                    Shift();
+                }
+            }
+
+            element.InnerText = script;
+            return result;
+        }
+
+        /// <summary>
         /// Считывает следующий HTML-атрибут 
         /// </summary>
         /// <returns></returns>
         private HTMLAttribute ParseAttribute()
         {
             HTMLAttribute attribute = new HTMLAttribute();
-            attribute.Name = (string)token;
+            attribute.Name = ToLower(token);
 
             Shift();
             if (token.Equals('='))
@@ -302,6 +429,11 @@ namespace MyBrowser
         private bool IsEmptyElement(string tag)
         {
             return emptyElements.Contains(tag);
+        }
+
+        private string ToLower(object tag)
+        {
+            return ((string)tag).ToLower();
         }
     }
 }
