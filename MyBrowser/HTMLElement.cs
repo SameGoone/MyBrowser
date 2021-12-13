@@ -1,47 +1,45 @@
 using System;
-using System.Text;
-using System.Collections;
 using System.Collections.Generic;
-
+using System.Windows.Media;
 
 namespace MyBrowser
 {
-    public class HTMLElement
+    public class HTMLElement : HTMLNode
     {
         public string Tag { get; private set; }
+        public List<HTMLAttribute> Attributes { get; set; } = new List<HTMLAttribute>();
+        public List<Style> Styles { get; set; } = new List<Style>();
 
-        public HTMLElement Parent { get; set; }
+        public int FontSize { get; set; }
+        public FontFamily FontFamily { get; set; }
+        public Color FontColor { get; set; }
 
-        public List<HTMLElement> Children { get; private set; }
+        public int MarginTop { get; set; }
+        public int MarginRight { get; set; }
+        public int MarginBottom { get; set; }
+        public int MarginLeft { get; set; }
 
-        public List<HTMLElement> Descendants { get; private set; }
+        public int PaddingTop { get; set; }
+        public int PaddingRight { get; set; }
+        public int PaddingBottom { get; set; }
+        public int PaddingLeft { get; set; }
 
-        public string InnerText { get; set; }
+        public int BorderWidth { get; set; }
+        public Color BorderColor { get; set; }
 
-        public List<HTMLAttribute> Attributes { get; private set; }
+        public Color BackgroundColor { get; set; }
 
-        public List<Style> Styles { get; private set; }
-
-        public List<HTMLElement> Siblings { get; private set; }
-
-        public HTMLElement NextSibling { get; set; }
-
-        public HTMLElement PreviousSibling { get; set; }
 
         public HTMLElement(string tag)
         {
-            Tag= tag;
-            Attributes = new List<HTMLAttribute>();
-            Children = new List<HTMLElement>();
-            InnerText = "";
+            Tag = tag;
         }
-
 
         public bool TryGetAttributeWithName(string attributeName, out HTMLAttribute attribute)
         {
             bool isContained = false;
             attribute = null;
-            foreach(var attr in Attributes)
+            foreach (var attr in Attributes)
             {
                 if (attribute.Name == attributeName)
                 {
@@ -53,11 +51,6 @@ namespace MyBrowser
             return isContained;
         }
 
-        public bool HasAttributeWithName(string attributeName)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
         public bool IsChildOfElement(string elementTag)
         {
             bool result;
@@ -65,7 +58,7 @@ namespace MyBrowser
             {
                 if (Parent.Tag == elementTag)
                     result = true;
-                else 
+                else
                     result = false;
             }
 
@@ -85,7 +78,7 @@ namespace MyBrowser
             throw new Exception("The method or operation is not implemented.");
         }
 
-        public void AddChild(HTMLElement newChild)
+        public void AddChild(HTMLNode newChild)
         {
             if (Children.Count > 0)
             {
@@ -97,12 +90,54 @@ namespace MyBrowser
             newChild.Parent = this;
         }
 
-        public void AddChildrenRange(List<HTMLElement> children)
+        public void AddChildrenRange(List<HTMLNode> children)
         {
             foreach (var child in children)
             {
                 AddChild(child);
             }
+        }
+
+        public override bool Equals(object? obj)
+        {
+            var other = obj as HTMLElement;
+            if (other != null)
+                return Tag == other.Tag && AttributesAreEqual(other);
+            else
+                return false;
+        }
+
+        private bool AttributesAreEqual(HTMLElement other)
+        {
+            bool result = true;
+            if (Attributes.Count == other.Attributes.Count)
+            {
+                for (int i = 0; i < Attributes.Count; i++)
+                {
+                    if (!Attributes[i].Equals(other.Attributes[i]))
+                    {
+                        result = false;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                result = false;
+            }
+
+            return result;
+        }
+
+        public override string GetString()
+        {
+            string result = $"<{Tag}";
+            foreach (var attr in Attributes)
+            {
+                result += $" {attr.Name}=\"{attr.Value}\"";
+            }
+            result += ">";
+            return result;
         }
     }
 }

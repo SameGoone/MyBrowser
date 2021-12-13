@@ -4,33 +4,9 @@ namespace MyBrowser
     {
         public HTMLElement Document { get; set; }
 
-        public HTMLElement Body
-        {
-            get
-            {
-                return body;
-            }
-            set
-            {
-                body = value;
-                Document.AddChild(body);
-            }
-        }
-        private HTMLElement body;
+        public HTMLElement Body { get; set; }
 
-        public HTMLElement Head
-        {
-            get
-            {
-                return head;
-            }
-            set
-            {
-                head = value;
-                Document.AddChild(head);
-            }
-        }
-        private HTMLElement head;
+        public HTMLElement Head { get; set; }
     }
 }
 

@@ -13,7 +13,7 @@ namespace MyBrowser
             return new OkResult();
         }
 
-        public static ElementParsingResult GetCloseAnotherTagResult(string tag, HTMLElement firstElement, List<HTMLElement> potentialChildren)
+        public static ElementParsingResult GetCloseAnotherTagResult(string tag, HTMLElement firstElement, List<HTMLNode> potentialChildren)
         {
             return new CloseAnotherTagResult(tag, firstElement, potentialChildren);
         }
@@ -27,15 +27,15 @@ namespace MyBrowser
     public class CloseAnotherTagResult : ElementParsingResult
     {
         public string Tag { get; private set; }
-        public List<HTMLElement> ElementsWithoutCloseTag { get; private set; } = new List<HTMLElement>();
+        public List<HTMLNode> ElementsWithoutCloseTag { get; private set; } = new List<HTMLNode>();
 
-        public CloseAnotherTagResult(string tag, HTMLElement firstElement, List<HTMLElement> potentialChildren)
+        public CloseAnotherTagResult(string tag, HTMLElement firstElement, List<HTMLNode> potentialChildren)
         {
             Tag = tag;
             AddElementWithPotentialChildren(firstElement, potentialChildren);
         }
 
-        public void AddElementWithPotentialChildren(HTMLElement element, List<HTMLElement> potentialChildren)
+        public void AddElementWithPotentialChildren(HTMLElement element, List<HTMLNode> potentialChildren)
         {
             for (int i = potentialChildren.Count - 1; i >= 0; i--)
             {
@@ -44,7 +44,7 @@ namespace MyBrowser
             AddElement(element);
         }
 
-        private void AddElement(HTMLElement element)
+        private void AddElement(HTMLNode element)
         {
             ElementsWithoutCloseTag.Insert(0, element);
         }

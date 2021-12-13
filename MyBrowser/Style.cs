@@ -8,30 +8,19 @@ namespace MyBrowser
 {
     public class Style
     {
-        public string Name
-        {
-            get
-            {
-                return m_Name;
-            }
-            set
-            {
-                m_Name = value;
-            }
-        }
-        private string m_Name;
+        public string Name { get; set; }
 
-        public string Value
+        public List<Value> Values { get; set; } = new List<Value>();
+
+        public Style(string name, params Value[] values)
         {
-            get
-            {
-                return m_Value;
-            }
-            set
-            {
-                m_Value = value;
-            }
+            Name = name;
+            Values.AddRange(new List<Value>(values));
         }
-        private string m_Value;
+
+        public void AddValue(ValueType type, object value)
+        {
+            Values.Add(new Value(type, value));
+        }
     }
 }

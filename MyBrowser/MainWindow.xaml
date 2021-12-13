@@ -5,11 +5,16 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:MyBrowser"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="687">
+        Title="MainWindow" Height="597" Width="999">
     <Grid>
-        <TextBox x:Name="TextBox1" HorizontalAlignment="Left" Margin="10,10,0,34" TextWrapping="Wrap" Width="310" AcceptsReturn = "True"/>
-        <Button Content="Parse" HorizontalAlignment="Left" Margin="241,0,0,9" VerticalAlignment="Bottom" Click="Button_Click" Width="79"/>
-        <TreeView x:Name="treeView" Margin="0,10,10,34" HorizontalAlignment="Right" RenderTransformOrigin="0.5,0.5" Width="333">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="608*"/>
+            <ColumnDefinition Width="15*"/>
+            <ColumnDefinition Width="64*"/>
+        </Grid.ColumnDefinitions>
+        <TextBox x:Name="TextBox1" HorizontalAlignment="Left" Margin="10,10,0,34" TextWrapping="Wrap" Width="310" AcceptsReturn = "True" BorderBrush="{x:Null}" SelectionBrush="#FF46D9FF"/>
+        <Button x:Name="ParseButton" Content="Parse" HorizontalAlignment="Left" Margin="165,0,0,9" VerticalAlignment="Bottom"  Width="79" Click="ParseButton_Click"/>
+        <TreeView x:Name="treeView" Margin="0,10,10,268" HorizontalAlignment="Right" RenderTransformOrigin="0.5,0.5" Width="262" Grid.ColumnSpan="3" SelectedItemChanged="OnTreeViewSelectedItemChanged">
             <TreeView.RenderTransform>
                 <TransformGroup>
                     <ScaleTransform ScaleX="1"/>
@@ -19,5 +24,13 @@
                 </TransformGroup>
             </TreeView.RenderTransform>
         </TreeView>
+        <ScrollViewer Margin="325,10,162,34">
+            <StackPanel x:Name="StackPanel" Orientation="Vertical" ></StackPanel>
+        </ScrollViewer>
+        <Button x:Name="RenderButton" Content="Render" HorizontalAlignment="Left" Margin="345,0,0,8" VerticalAlignment="Bottom" Width="79" Click="RenderButton_Click"/>
+        <Button x:Name="TestButton" Content="Button" HorizontalAlignment="Left" Height="19" Margin="524,0,0,9" VerticalAlignment="Bottom" Width="136" Click="TestButton_Click"/>
+        <ScrollViewer Margin="727,318,10,34" Grid.ColumnSpan="3">
+            <TextBlock x:Name="NodeInfoTextBlock" HorizontalAlignment="Left"  TextWrapping="Wrap"  Text="TextBlock" VerticalAlignment="Top" Grid.ColumnSpan="3" Height="223" Width="262"/>
+        </ScrollViewer>
     </Grid>
 </Window>

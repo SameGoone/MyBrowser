@@ -6,13 +6,75 @@ using System.Collections.Generic;
 
 namespace MyBrowser
 {
+    /// <summary>
+    /// Расширения для удобной работы со списками элементов и узлов
+    /// </summary>
+    public static class ListExtensions
+    {
+        public static bool TryGetElementWithTag(this List<HTMLElement> elements, string tag, out HTMLElement element)
+        {
+            bool result = false;
+            element = null;
+
+            foreach (HTMLElement elem in elements)
+            {
+                if (elem.Tag.Equals(tag))
+                {
+                    element = elem;
+                    result = true;
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        public static bool HasElementWithTag(this List<HTMLElement> elements, string tag)
+        {
+            bool result = false;
+
+            foreach (HTMLElement elem in elements)
+            {
+                if (elem.Tag.Equals(tag))
+                {
+                    result = true;
+                    break;
+                }
+            }
+
+            return result;
+        }
+
+        public static bool TryGetElementWithTag(this List<HTMLNode> nodes, string tag, out HTMLElement element)
+        {
+            bool result = false;
+            element = null;
+
+            foreach (HTMLNode node in nodes)
+            {
+                if (node is HTMLElement)
+                {
+                    var elem = node as HTMLElement;
+                    if (elem.Tag.Equals(tag))
+                    {
+                        element = elem;
+                        result = true;
+                        break;
+                    }
+                }
+            }
+
+            return result;
+        }
+    }
+
     public class ParserHTML
     {
         private readonly string htmlTag = "html";
         private readonly string headTag = "head";
         private readonly string bodyTag = "body";
         private readonly List<string> emptyElements = new List<string> { "area", "base", "br", "col", "embed", "hr", "img", "input", "keygen", "link", "meta", "param", "source", "track", "wbr" };
-        private readonly List<string> onlyHeadElements = new List<string> { "title", "link", "style", "bgsound", "base" };
+        private readonly List<string> onlyHeadElements = new List<string> { "title", "link", "style", "bgsound", "base", "meta" };
         private readonly List<string> bodyOrHeadElements = new List<string> { "script", "basefront" };
         private Lexer lexer;
 
@@ -40,23 +102,13 @@ namespace MyBrowser
                 Shift();
                 if (token is string)
                 {
-                    var tag = ToLower(token);
-                    if (tag.Equals(htmlTag))
+                    List<HTMLElement> roots = new List<HTMLElement>();
+                    while (!(token is NonToken))
                     {
                         ElementParsingResult result;
-                        dom.Document = ParseElement(out result);
+                        roots.Add(ParseElement(out result));
                     }
-                    else
-                    {
-                        dom.Document = new HTMLElement(htmlTag);
-                        List<HTMLElement> potentialChildren = new List<HTMLElement>();
-                        while (!(token is NonToken))
-                        {
-                            ElementParsingResult result;
-                            potentialChildren.Add(ParseElement(out result));
-                        }
-                        CorrectDOM(dom, potentialChildren);
-                    }
+                    CorrectDOM(dom, roots);
                 }
             }
 
@@ -68,42 +120,110 @@ namespace MyBrowser
         /// </summary>
         /// <param name="dom"></param>
         /// <param name="potentialChildren"></param>
-        private void CorrectDOM(DOM dom, List<HTMLElement> potentialChildren)
+        private void CorrectDOM(DOM dom, List<HTMLElement> roots)
         {
-            if (dom.Document == null)
+            if (roots.Count == 1 && roots[0].Tag == htmlTag)
+            {
+                var tempHtml = roots[0];
                 dom.Document = new HTMLElement(htmlTag);
+                dom.Document.Attributes = tempHtml.Attributes;
 
-            List<HTMLElement> elementsWithoutContainer = new List<HTMLElement>(potentialChildren);
-
-            foreach (HTMLElement element in potentialChildren)
-            {
-                if (element.Tag.Equals(headTag))
-                {
-                    dom.Head = element;
-                    elementsWithoutContainer.Remove(element);
-                }
-                else if (element.Tag.Equals(bodyTag))
-                {
-                    dom.Body = element;
-                    elementsWithoutContainer.Remove(element);
-                }
-            }
-
-            if (dom.Head == null)
-            {
-                dom.Head = new HTMLElement(headTag);
-            }
-            if (dom.Body == null)
-            {
-                dom.Body = new HTMLElement(bodyTag);
-            }
-
-            foreach (HTMLElement element in elementsWithoutContainer)
-            {
-                if (onlyHeadElements.Contains(element.Tag))
-                    dom.Head.AddChild(element);
+                List<HTMLNode> elementsToAnalyze = new List<HTMLNode>(tempHtml.Children);
+                HTMLElement body;
+                if (tempHtml.Children.TryGetElementWithTag(bodyTag, out body))
+                    elementsToAnalyze.Remove(body);
                 else
-                    dom.Body.AddChild(element);
+                    body = new HTMLElement(bodyTag);
+                dom.Body = body;
+
+                HTMLElement head;
+                if (tempHtml.Children.TryGetElementWithTag(headTag, out head))
+                    elementsToAnalyze.Remove(head);
+                else
+                    head = new HTMLElement(headTag);
+                dom.Head = head;
+
+                dom.Document.AddChild(dom.Head);
+                dom.Document.AddChild(dom.Body);
+
+                if (elementsToAnalyze.Count > 0)
+                {
+                    foreach (HTMLNode node in elementsToAnalyze)
+                    {
+                        if (node is HTMLElement)
+                        {
+                            var element = node as HTMLElement;
+                            if (element.Tag == headTag || element.Tag == bodyTag || element.Tag == htmlTag)
+                                continue;
+
+                            if (onlyHeadElements.Contains(element.Tag))
+                                dom.Head.AddChild(element);
+                            else
+                                dom.Body.AddChild(element);
+                        }
+                        else
+                            dom.Body.AddChild(node);
+                    }
+                }
+            }
+            else
+            {
+                HTMLElement elem;
+                
+                if (roots.TryGetElementWithTag(htmlTag, out HTMLElement html))
+                {
+                    dom.Document = html;
+                    if (html.Children.TryGetElementWithTag(headTag, out HTMLElement head))
+                        dom.Head = head;
+
+                    if (html.Children.TryGetElementWithTag(headTag, out HTMLElement body))
+                        dom.Body = body;
+                }
+                else
+                {
+                    dom.Document = new HTMLElement(htmlTag);
+                }
+
+                if (roots.TryGetElementWithTag(headTag, out elem))
+                {
+                    if (dom.Head == null)
+                    {
+                        dom.Head = elem;
+                        dom.Document.AddChild(dom.Head);
+                    }
+                }
+
+                if (roots.TryGetElementWithTag(bodyTag, out elem))
+                {
+                    if (dom.Body == null)
+                    {
+                        dom.Body = elem;
+                        dom.Document.AddChild(dom.Body);
+                    }
+                }
+
+                if (dom.Head == null)
+                {
+                    dom.Head = new HTMLElement(headTag);
+                    dom.Document.AddChild(dom.Head);
+                }
+
+                if (dom.Body == null)
+                {
+                    dom.Body = new HTMLElement(bodyTag);
+                    dom.Document.AddChild(dom.Body);
+                }
+
+                foreach (HTMLElement element in roots)
+                {
+                    if (element.Tag == headTag || element.Tag == bodyTag || element.Tag == htmlTag)
+                        continue;
+
+                    if (onlyHeadElements.Contains(element.Tag))
+                        dom.Head.AddChild(element);
+                    else
+                        dom.Body.AddChild(element);
+                }
             }
         }
 
@@ -126,7 +246,7 @@ namespace MyBrowser
                         Shift();
                 }
 
-            List<HTMLElement> potentialChildren = new List<HTMLElement>();
+            List<HTMLNode> potentialChildren = new List<HTMLNode>();
             HTMLElement newElement = new HTMLElement(ToLower(token));
             bool insideOpeningTag = true;
             Shift();
@@ -186,7 +306,6 @@ namespace MyBrowser
                         // Если закрывающий тэг
                         if (token.Equals('/'))
                         {
-                            Shift();
                             result = ParseCloseTag(newElement, potentialChildren);
                             return newElement;
                         }
@@ -225,21 +344,9 @@ namespace MyBrowser
                         // TODO: добавить поддержку знаков < и > в тексте
                     }
                     else
-                    {
-                        newElement.InnerText += ParseInnerText();
-                    }
+                        newElement.AddChild(ParseText());
                 }
             }
-        }
-
-        /// <summary>
-        /// Сдвигает указатель на токен, следующий за синтаксисом закрытия тэга
-        /// </summary>
-        private void ShiftToEndOfEndingTag()
-        {
-            Shift();
-            if (token.Equals('>'))
-                Shift();
         }
 
         /// <summary>
@@ -248,7 +355,7 @@ namespace MyBrowser
         /// <param name="element">Текущий анализируемый элемент</param>
         /// <param name="potentialChildren">Элементы, которые обнаружены, как потенциально дочерние к текущему</param>
         /// <returns>Определяет, был ли проанализирован закрывающий тэг данного элемента, или другого</returns>
-        private ElementParsingResult ParseCloseTag(HTMLElement element, List<HTMLElement> potentialChildren)
+        private ElementParsingResult ParseCloseTag(HTMLElement element, List<HTMLNode> potentialChildren)
         {
             Shift();
             ElementParsingResult result;
@@ -276,6 +383,16 @@ namespace MyBrowser
             return result;
         }
 
+        /// <summary>
+        /// Сдвигает указатель на токен, следующий за синтаксисом закрытия тэга
+        /// </summary>
+        private void ShiftToEndOfEndingTag()
+        {
+            Shift();
+            if (token.Equals('>'))
+                Shift();
+        }
+
         private ElementParsingResult ReadScript(HTMLElement element)
         {
             string script = "";
@@ -287,8 +404,7 @@ namespace MyBrowser
                     Shift();
                     if (token.Equals('/'))
                     {
-                        Shift();
-                        result = ParseCloseTag(element, new List<HTMLElement>());
+                        result = ParseCloseTag(element, new List<HTMLNode>());
                         break;
                     }
                     else
@@ -304,7 +420,7 @@ namespace MyBrowser
                 }
             }
 
-            element.InnerText = script;
+            element.AddChild(new HTMLText(script));
             return result;
         }
 
@@ -314,8 +430,8 @@ namespace MyBrowser
         /// <returns></returns>
         private HTMLAttribute ParseAttribute()
         {
-            HTMLAttribute attribute = new HTMLAttribute();
-            attribute.Name = ToLower(token);
+            string attributeName = ToLower(token);
+            string attributeValue = "";
 
             Shift();
             if (token.Equals('='))
@@ -323,15 +439,15 @@ namespace MyBrowser
                 Shift();
                 if (token.Equals('\"') || token.Equals('\''))
                 {
-                    attribute.Value = GetStringData((char)token);
+                    attributeValue = GetStringData((char)token);
                 }
                 else;
                 // TODO: Добавить поддержку атрибутов без кавычек
             }
             else
-                attribute.Value = "";
+                attributeValue = "";
 
-            return attribute;
+            return new HTMLAttribute(attributeName, attributeValue);
         }
 
         /// <summary>
@@ -357,7 +473,7 @@ namespace MyBrowser
         /// Считывает текст между тегами
         /// </summary>
         /// <returns></returns>
-        private string ParseInnerText()
+        private HTMLText ParseText()
         {
             string text = "";
             bool isFirst = true;
@@ -368,15 +484,11 @@ namespace MyBrowser
                 else
                     text += " ";
 
-                if (token.GetType() == typeof(char[]))
-                    text += new string((char[])token);
-                else
-                    text += token.ToString();
-
+                text += token.ToString();
                 Shift();
             }
 
-            return text;
+            return new HTMLText(text);
         }
 
         /// <summary>
